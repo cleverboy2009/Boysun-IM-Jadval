@@ -1,226 +1,364 @@
+"""
+Boysun IM - Dars Jadvali Backend (Flask)
+To'liq mukammal Python backend
+"""
 import os
-import re
-from datetime import datetime
-from flask import Flask, request, jsonify, send_from_directory, session
-import logging
 import json
+import logging
+from datetime import datetime
+from functools import wraps
+from flask import Flask, request, jsonify, send_from_directory, session
 
-# Initialize Flask app
+# ============================================
+# KONFIGURATSIYA
+# ============================================
+
+# Initialize Flask
 app = Flask(__name__, 
             static_folder='.',
             static_url_path='',
             template_folder='.')
 
-# Configuration
-app.secret_key = os.getenv('SECRET_KEY', 'boysun_secret_key_2026')
+# Secret key for sessions
+app.secret_key = os.getenv('SECRET_KEY', 'boysun_im_secure_secret_key_2026')
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-# Admin Credentials (as requested)
+# Admin credentials
 ADMIN_LOGIN = "Barzu Majidov01"
 ADMIN_PASS = "boysun2026"
 
-# Simple JSON Databases
+# Database files (using absolute paths)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEACHERS_DB = os.path.join(BASE_DIR, 'teachers.json')
 TIMETABLE_DB = os.path.join(BASE_DIR, 'timetable.json')
 TIMETABLE_JS = os.path.join(BASE_DIR, 'timetable-data.js')
 
-def sync_timetable_js(data):
-    """Sync changes to the static JS file for local usage"""
-    if not os.path.exists(TIMETABLE_JS):
-        return
-        
+# ============================================
+# HELPER FUNCTIONS
+# ============================================
+
+def load_json_file(filepath, default=None):
+    """Load JSON file with error handling"""
+    if default is None:
+        default = {}
+    
     try:
+        if not os.path.exists(filepath):
+            logger.warning(f"File not found: {filepath}, creating with default value")
+            save_json_file(filepath, default)
+            return default
+        
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading {filepath}: {e}")
+        return default
+
+def save_json_file(filepath, data):
+    """Save JSON file with error handling"""
+    try:
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        logger.info(f"Saved: {filepath}")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving {filepath}: {e}")
+        return False
+
+def sync_timetable_to_js(timetable_data):
+    """Sync timetable.json changes to timetable-data.js"""
+    try:
+        if not os.path.exists(TIMETABLE_JS):
+            logger.warning(f"JS file not found: {TIMETABLE_JS}")
+            return False
+        
         with open(TIMETABLE_JS, 'r', encoding='utf-8') as f:
-            content = f.read()
+            js_content = f.read()
         
-        formatted_data = json.dumps(data, ensure_ascii=False, indent=4)
+        # Convert to formatted JSON string
+        formatted_json = json.dumps(timetable_data, ensure_ascii=False, indent=4)
         
-        # Regex to find: timetableData: { ... }, // END_TIMETABLE_DATA
-        # Using a pattern that matches the specific structure in timetable-data.js
-        pattern = r'(timetableData:\s*)({[\s\S]*?})(\s*,\s*// END_TIMETABLE_DATA)'
+        # Replace the timetableData object in JS file
+        import re
+        pattern = r'(timetableData:\s*)({[\s\S]*?})(\s*,\s*//\s*END_TIMETABLE_DATA)'
         
-        if re.search(pattern, content):
-            new_content = re.sub(pattern, lambda m: m.group(1) + formatted_data + m.group(3), content)
+        if re.search(pattern, js_content):
+            new_content = re.sub(
+                pattern, 
+                lambda m: m.group(1) + formatted_json + m.group(3), 
+                js_content
+            )
+            
             with open(TIMETABLE_JS, 'w', encoding='utf-8') as f:
                 f.write(new_content)
-            logger.info("Successfully synced timetable-data.js")
+            
+            logger.info("Successfully synced timetable to JS file")
+            return True
+        else:
+            logger.warning("Could not find timetableData pattern in JS file")
+            return False
+            
     except Exception as e:
-        logger.error(f"Failed to sync timetable-data.js: {e}")
+        logger.error(f"Error syncing to JS: {e}")
+        return False
 
-def load_db(filename, default=[]):
-    if not os.path.exists(filename):
-        with open(filename, 'w') as f:
-            json.dump(default, f)
-    with open(filename, 'r') as f:
-        return json.load(f)
+# ============================================
+# AUTHENTICATION DECORATOR
+# ============================================
 
-def save_db(filename, data):
-    with open(filename, 'w') as f:
-        json.dump(data, f)
+def admin_required(f):
+    """Decorator to require admin authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return jsonify({'error': 'Unauthorized', 'message': 'Admin tizimga kiring'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
 
+# ============================================
+# ROUTES - STATIC FILES
+# ============================================
 
-def sanitize_input(text, max_length=1000):
-    """Sanitize user input to prevent XSS"""
-    if not text:
-        return ""
-    
-    # Remove any HTML tags
-    text = re.sub(r'<[^>]*>', '', str(text))
-    
-    # Limit length
-    text = text[:max_length]
-    
-    # Remove potentially dangerous characters
-    text = text.replace('<', '').replace('>', '').replace('"', '').replace("'", '')
-    
-    return text.strip()
-
-
-
-
-# Routes
 @app.route('/')
 def index():
-    """Serve index.html"""
+    """Serve main page"""
     return send_from_directory('.', 'index.html')
 
 @app.route('/<path:path>')
 def serve_static(path):
     """Serve static files"""
-    return send_from_directory('.', path)
+    try:
+        return send_from_directory('.', path)
+    except:
+        return jsonify({'error': 'File not found'}), 404
 
-@app.route('/api/csrf-token', methods=['GET'])
-def get_csrf_token():
-    """Get CSRF token for forms"""
-    # Simple mock token since we removed WTF
-    return jsonify({'csrf_token': 'no-csrf-needed-in-simple-mode'})
+# ============================================
+# API - ADMIN AUTHENTICATION
+# ============================================
 
-# Admin API
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():
-    data = request.get_json()
-    if data.get('login') == ADMIN_LOGIN and data.get('password') == ADMIN_PASS:
-        session['logged_in'] = True
-        return jsonify({'success': True})
-    return jsonify({'error': 'Xato login yoki parol'}), 401
+    """Admin login endpoint"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'Ma\'lumot topilmadi'}), 400
+        
+        username = data.get('login', '').strip()
+        password = data.get('password', '').strip()
+        
+        if username == ADMIN_LOGIN and password == ADMIN_PASS:
+            session['logged_in'] = True
+            session['username'] = username
+            logger.info(f"Admin logged in: {username}")
+            return jsonify({
+                'success': True,
+                'message': 'Muvaffaqiyatli kirdingiz'
+            })
+        else:
+            logger.warning(f"Failed login attempt: {username}")
+            return jsonify({
+                'error': 'Xato',
+                'message': 'Login yoki parol noto\'g\'ri'
+            }), 401
+            
+    except Exception as e:
+        logger.error(f"Login error: {e}")
+        return jsonify({'error': 'Server xatoligi'}), 500
 
 @app.route('/api/admin/logout', methods=['POST'])
 def admin_logout():
-    session.pop('logged_in', None)
-    return jsonify({'success': True})
+    """Admin logout endpoint"""
+    session.clear()
+    logger.info("Admin logged out")
+    return jsonify({'success': True, 'message': 'Tizimdan chiqdingiz'})
 
 @app.route('/api/admin/status', methods=['GET'])
 def admin_status():
-    return jsonify({'logged_in': session.get('logged_in', False)})
+    """Check admin login status"""
+    is_logged_in = session.get('logged_in', False)
+    return jsonify({
+        'logged_in': is_logged_in,
+        'username': session.get('username') if is_logged_in else None
+    })
 
-# Teachers API
+# ============================================
+# API - TIMETABLE
+# ============================================
+
+@app.route('/api/timetable', methods=['GET'])
+def get_timetable():
+    """Get complete timetable data"""
+    try:
+        timetable = load_json_file(TIMETABLE_DB, {})
+        return jsonify(timetable)
+    except Exception as e:
+        logger.error(f"Error getting timetable: {e}")
+        return jsonify({'error': 'Jadval yuklanmadi'}), 500
+
+@app.route('/api/timetable', methods=['POST'])
+@admin_required
+def save_timetable():
+    """Save timetable data (Admin only)"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': 'Ma\'lumot topilmadi'}), 400
+        
+        # Save to JSON file
+        if save_json_file(TIMETABLE_DB, data):
+            # Sync to JS file for local fallback
+            sync_timetable_to_js(data)
+            
+            logger.info("Timetable saved successfully")
+            return jsonify({
+                'success': True,
+                'message': 'Jadval saqlandi'
+            })
+        else:
+            return jsonify({'error': 'Saqlashda xatolik'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error saving timetable: {e}")
+        return jsonify({'error': 'Server xatoligi'}), 500
+
+# ============================================
+# API - TEACHERS
+# ============================================
+
 @app.route('/api/teachers', methods=['GET'])
 def get_teachers():
-    return jsonify(load_db(TEACHERS_DB))
+    """Get all teachers"""
+    try:
+        teachers = load_json_file(TEACHERS_DB, [])
+        return jsonify(teachers)
+    except Exception as e:
+        logger.error(f"Error getting teachers: {e}")
+        return jsonify({'error': 'O\'qituvchilar yuklanmadi'}), 500
 
 @app.route('/api/teachers', methods=['POST'])
 @admin_required
 def add_teacher():
-    data = request.get_json()
-    teachers = load_db(TEACHERS_DB)
-    new_id = max([t.get('id', 0) for t in teachers], default=0) + 1
-    new_teacher = {
-        'id': new_id,
-        'name': sanitize_input(data.get('name'), 100),
-        'subject': sanitize_input(data.get('subject'), 100),
-        'image': data.get('image')
-    }
-    teachers.append(new_teacher)
-    save_db(TEACHERS_DB, teachers)
-    return jsonify({'success': True})
+    """Add new teacher (Admin only)"""
+    try:
+        data = request.get_json()
+        
+        if not data or not data.get('name'):
+            return jsonify({'error': 'O\'qituvchi nomi kiritilmadi'}), 400
+        
+        teachers = load_json_file(TEACHERS_DB, [])
+        
+        # Generate new ID
+        new_id = max([t.get('id', 0) for t in teachers], default=0) + 1
+        
+        new_teacher = {
+            'id': new_id,
+            'name': data.get('name', '').strip(),
+            'subject': data.get('subject', '').strip(),
+            'schedule': data.get('schedule', {})
+        }
+        
+        teachers.append(new_teacher)
+        
+        if save_json_file(TEACHERS_DB, teachers):
+            logger.info(f"Teacher added: {new_teacher['name']}")
+            return jsonify({
+                'success': True,
+                'teacher': new_teacher,
+                'message': 'O\'qituvchi qo\'shildi'
+            })
+        else:
+            return jsonify({'error': 'Saqlashda xatolik'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error adding teacher: {e}")
+        return jsonify({'error': 'Server xatoligi'}), 500
 
-@app.route('/api/teachers/<int:tid>', methods=['DELETE'])
+@app.route('/api/teachers/<int:teacher_id>', methods=['DELETE'])
 @admin_required
-def delete_teacher(tid):
-    teachers = load_db(TEACHERS_DB)
-    teachers = [t for t in teachers if t['id'] != tid]
-    save_db(TEACHERS_DB, teachers)
-    return jsonify({'success': True})
-
-
-# Timetable API
-@app.route('/api/timetable', methods=['GET'])
-def get_timetable():
-    if not os.path.exists(TIMETABLE_DB):
-        return jsonify({})
-    with open(TIMETABLE_DB, 'r', encoding='utf-8') as f:
-        return jsonify(json.load(f))
-
-@app.route('/api/timetable', methods=['POST'])
-def save_timetable():
-    # Check auth: accept session login OR static token from legacy frontend
-    auth_header = request.headers.get('Authorization')
-    is_authorized = False
-    
-    if session.get('logged_in'):
-        is_authorized = True
-    elif auth_header == 'Bearer admin_token_boysun2026':
-        is_authorized = True
+def delete_teacher(teacher_id):
+    """Delete teacher (Admin only)"""
+    try:
+        teachers = load_json_file(TEACHERS_DB, [])
         
-    if not is_authorized:
-        return jsonify({'error': 'Unauthorized'}), 401
-
-    data = request.get_json()
-    
-    # Ensure directory exists
-    os.makedirs(os.path.dirname(TIMETABLE_DB), exist_ok=True)
-    
-    with open(TIMETABLE_DB, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+        # Filter out the teacher
+        teachers = [t for t in teachers if t.get('id') != teacher_id]
         
-    # Sync to JS file
-    sync_timetable_js(data)
-        
-    return jsonify({'success': True})
+        if save_json_file(TEACHERS_DB, teachers):
+            logger.info(f"Teacher deleted: ID {teacher_id}")
+            return jsonify({
+                'success': True,
+                'message': 'O\'qituvchi o\'chirildi'
+            })
+        else:
+            return jsonify({'error': 'O\'chirishda xatolik'}), 500
+            
+    except Exception as e:
+        logger.error(f"Error deleting teacher: {e}")
+        return jsonify({'error': 'Server xatoligi'}), 500
 
+# ============================================
+# API - HEALTH CHECK
+# ============================================
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
+    """Server health check"""
     return jsonify({
         'status': 'healthy',
-        'timestamp': datetime.now().isoformat()
+        'server': 'Boysun IM Timetable Backend',
+        'timestamp': datetime.now().isoformat(),
+        'database_status': {
+            'timetable': os.path.exists(TIMETABLE_DB),
+            'teachers': os.path.exists(TEACHERS_DB)
+        }
     })
 
+# ============================================
+# ERROR HANDLERS
+# ============================================
 
-# Error handlers
-@app.errorhandler(429)
-def ratelimit_handler(e):
-    """Handle rate limit errors"""
-    return jsonify({
-        'success': False,
-        'error': 'Juda ko\'p so\'rov yuborildi. Iltimos bir oz kuting.'
-    }), 429
-
-
-@app.errorhandler(400)
-def bad_request_handler(e):
-    """Handle bad requests"""
-    return jsonify({
-        'success': False,
-        'error': 'Noto\'g\'ri so\'rov'
-    }), 400
-
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({'error': 'Sahifa topilmadi'}), 404
 
 @app.errorhandler(500)
-def internal_error_handler(e):
-    """Handle internal errors"""
-    logger.error(f"Internal error: {str(e)}")
-    return jsonify({
-        'success': False,
-        'error': 'Server xatoligi. Iltimos qaytadan urinib ko\'ring.'
-    }), 500
+def internal_error(e):
+    logger.error(f"Internal error: {e}")
+    return jsonify({'error': 'Server xatoligi'}), 500
 
+# ============================================
+# MAIN - LOCAL SERVER
+# ============================================
 
 if __name__ == '__main__':
-    # Development server
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    print("\n" + "="*70)
+    print("  BOYSUN IM - DARS JADVALI BACKEND SERVER")
+    print("="*70)
+    print("\n✓ Server manzili: http://127.0.0.1:5000")
+    print("✓ Admin panel: http://127.0.0.1:5000/admin-login.html")
+    print("\n📋 Admin ma'lumotlari:")
+    print(f"   Login: {ADMIN_LOGIN}")
+    print(f"   Parol: {ADMIN_PASS}")
+    print("\n📁 Ma'lumotlar:")
+    print(f"   Jadval: {TIMETABLE_DB}")
+    print(f"   O'qituvchilar: {TEACHERS_DB}")
+    print("\n⚠️  Server to'xtatish: Ctrl+C bosing")
+    print("="*70 + "\n")
+    
+    # Run development server
+    app.run(
+        debug=True,
+        host='127.0.0.1',
+        port=5000,
+        threaded=True
+    )

@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.png" type="image/x-icon">
+    <link rel="apple-touch-icon" href="favicon.png">
     <style>
         .login-container {
             min-height: 100vh;
@@ -112,8 +114,26 @@
                 icon.classList.add('fa-eye');
             }
         });
+        // ===== HYBRID MODE: Works both WITH and WITHOUT backend =====
 
-        // Login form submission
+        // Credentials (same as app.py)
+        const ADMIN_LOGIN = "Barzu Majidov01";
+        const ADMIN_PASS = "boysun2026";
+
+        // Check if backend is available
+        async function checkBackendAvailable() {
+            try {
+                const response = await fetch('/api/health', {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(2000) // 2 second timeout
+                });
+                return response.ok;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        // Login form submission - HYBRID MODE
         document.getElementById('loginForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
@@ -121,49 +141,74 @@
             const password = document.getElementById('password').value;
             const errorMessage = document.getElementById('errorMessage');
 
-            try {
-                const response = await fetch('/api/admin/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        login: username,
-                        password: password
-                    })
-                });
+            // Check if backend is available
+            const hasBackend = await checkBackendAvailable();
 
-                const data = await response.json();
+            if (hasBackend) {
+                // MODE 1: Use backend API
+                try {
+                    const response = await fetch('/api/admin/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ login: username, password: password })
+                    });
 
-                if (response.ok && data.success) {
-                    // Redirect to admin panel
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        // Also save to localStorage for offline fallback
+                        localStorage.setItem('admin_logged_in', 'true');
+                        localStorage.setItem('admin_username', username);
+                        window.location.href = 'admin-panel.html';
+                    } else {
+                        errorMessage.textContent = data.error || 'Xato login yoki parol';
+                        errorMessage.classList.remove('d-none');
+                    }
+                } catch (error) {
+                    console.error('Backend login error:', error);
+                    errorMessage.textContent = 'Server xatoligi';
+                    errorMessage.classList.remove('d-none');
+                }
+            } else {
+                // MODE 2: Use localStorage (offline mode)
+                if (username === ADMIN_LOGIN && password === ADMIN_PASS) {
+                    localStorage.setItem('admin_logged_in', 'true');
+                    localStorage.setItem('admin_username', username);
+                    localStorage.setItem('offline_mode', 'true');
                     window.location.href = 'admin-panel.html';
                 } else {
-                    errorMessage.textContent = data.error || 'Noto\'g\'ri foydalanuvchi nomi yoki parol!';
+                    errorMessage.textContent = 'Noto\'g\'ri login yoki parol';
                     errorMessage.classList.remove('d-none');
-
-                    // Hide error after 3 seconds
-                    setTimeout(() => {
-                        errorMessage.classList.add('d-none');
-                    }, 3000);
                 }
-            } catch (error) {
-                console.error('Login error:', error);
-                errorMessage.textContent = 'Server xatoligi. Iltimos qaytadan urinib ko\'ring.';
-                errorMessage.classList.remove('d-none');
             }
+
+            // Hide error after 3 seconds
+            setTimeout(() => errorMessage.classList.add('d-none'), 3000);
         });
 
         // Check if already logged in
         window.addEventListener('DOMContentLoaded', async function () {
-            try {
-                const response = await fetch('/api/admin/status');
-                const data = await response.json();
-                if (data.logged_in) {
+            const hasBackend = await checkBackendAvailable();
+
+            if (hasBackend) {
+                // Check backend session
+                try {
+                    const response = await fetch('/api/admin/status');
+                    const data = await response.json();
+                    if (data.logged_in) {
+                        window.location.href = 'admin-panel.html';
+                    }
+                } catch (e) {
+                    // Fallback to localStorage
+                    if (localStorage.getItem('admin_logged_in') === 'true') {
+                        window.location.href = 'admin-panel.html';
+                    }
+                }
+            } else {
+                // Offline mode - check localStorage
+                if (localStorage.getItem('admin_logged_in') === 'true') {
                     window.location.href = 'admin-panel.html';
                 }
-            } catch (e) {
-                console.log("Not logged in");
             }
         });
     </script>

@@ -110,6 +110,31 @@
                 this.render();
             },
 
+            getSubjectIcon(subject) {
+                const s = subject.toLowerCase();
+                // Cambridge combinations
+                if (s.includes('/') && (s.includes('m') || s.includes('ct') || s.includes('r') || s.includes('i'))) {
+                    if (s.includes('ct')) return 'fas fa-globe';
+                    if (s.includes('r')) return 'fas fa-language';
+                    if (s.includes('i')) return 'fas fa-laptop-code';
+                    return 'fas fa-calculator';
+                }
+
+                // Normal subjects
+                if (s.includes('matematika') || s.includes('algebra') || s.includes('geo')) return 'fas fa-calculator';
+                if (s.includes('ona tili') || s.includes('adabiyot')) return 'fas fa-pen-nib';
+                if (s.includes('science') || s.includes('fizika') || s.includes('kimyo') || s.includes('biol')) return 'fas fa-flask';
+                if (s.includes('tarix')) return 'fas fa-monument';
+                if (s.includes('chet tili') || s.includes('ingliz')) return 'fas fa-globe';
+                if (s.includes('rus tili')) return 'fas fa-language';
+                if (s.includes('informatika')) return 'fas fa-laptop-code';
+                if (s.includes('jismoniy')) return 'fas fa-running';
+                if (s.includes('sinf soati')) return 'fas fa-users-viewfinder';
+                if (s.includes('tarbiya')) return 'fas fa-graduation-cap';
+
+                return 'fas fa-book-open'; // Default icon
+            },
+
             render() {
                 const urlParams = new URLSearchParams(window.location.search);
                 const className = urlParams.get('c');
@@ -144,8 +169,9 @@
                     const period = lesson[0];
                     const subjectCode = lesson[1];
                     const subjectName = this.subjects[subjectCode] || subjectCode || "Dars yo'q";
+                    const iconClass = this.getSubjectIcon(subjectName);
 
-                    if (!subjectCode || subjectCode === "-") return ''; // Skip empty
+                    if (!subjectCode || subjectCode === "-" || subjectCode === "") return ''; // Skip empty
 
                     return `
                         <div class="col-12">
@@ -157,8 +183,8 @@
                                     <h5 class="mb-0 fw-bold">${subjectName}</h5>
                                     <p class="small text-muted mb-0">${period}-dars</p>
                                 </div>
-                                <div class="text-primary">
-                                    <i class="fas fa-book-open"></i>
+                                <div class="text-primary fs-4">
+                                    <i class="${iconClass}"></i>
                                 </div>
                             </div>
                         </div>

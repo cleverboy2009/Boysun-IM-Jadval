@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="shortcut icon" href="favicon.png" type="image/x-icon">
+    <link rel="apple-touch-icon" href="favicon.png">
 </head>
 
 <body class="dark-mode">
@@ -124,22 +126,114 @@
         let currentEditingDay = "";
         let currentEditingPeriod = "";
         let hasUnsavedChanges = false;
+        let currentTimetableData = {}; // Holds the currently loaded timetable data
+
+        // ===== HYBRID MODE: Auto-detect backend =====
+        let USE_BACKEND = false;
+
+        // Check backend availability
+        async function checkBackend() {
+            try {
+                const response = await fetch('/api/health', {
+                    method: 'GET',
+                    signal: AbortSignal.timeout(2000)
+                });
+                USE_BACKEND = response.ok;
+                console.log('Backend mode:', USE_BACKEND ? 'ONLINE' : 'OFFLINE');
+
+                // Show indicator
+                if (USE_BACKEND) {
+                    document.body.insertAdjacentHTML('beforeend',
+                        '<div style="position:fixed;top:10px;right:10px;background:#28a745;color:white;padding:5px 10px;border-radius:5px;font-size:12px;">🟢 SERVER MODE</div>');
+                } else {
+                    document.body.insertAdjacentHTML('beforeend',
+                        '<div style="position:fixed;top:10px;right:10px;background:#ffc107;color:black;padding:5px 10px;border-radius:5px;font-size:12px;">🟡 OFFLINE MODE</div>');
+                }
+            } catch (e) {
+                USE_BACKEND = false;
+                console.log('Backend mode: OFFLINE');
+            }
+        }
+
+        // Load timetable data
+        async function loadTimetableData() {
+            if (USE_BACKEND) {
+                // Load from backend
+                try {
+                    const response = await fetch('/api/timetable');
+                    if (response.ok) {
+                        return await response.json();
+                    }
+                } catch (e) {
+                    console.error('Backend load failed:', e);
+                }
+            }
+
+            // Fallback to localStorage or default
+            const stored = localStorage.getItem('timetable_data');
+            return stored ? JSON.parse(stored) : (typeof timetableData !== 'undefined' ? timetableData : {});
+        }
+
+        // Save timetable data
+        async function saveTimetableData(data) {
+            // Always save to localStorage
+            localStorage.setItem('timetable_data', JSON.stringify(data));
+
+            if (USE_BACKEND) {
+                // Also save to backend
+                try {
+                    const response = await fetch('/api/timetable', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+
+                    if (response.ok) {
+                        console.log('✓ Saved to backend');
+                        return true;
+                    } else {
+                        console.warn('⚠ Backend save failed, data saved locally only');
+                    }
+                } catch (e) {
+                    console.error('Backend save error:', e);
+                }
+            }
+
+            console.log('✓ Saved to localStorage');
+            return true;
+        }
 
         // Initialize Admin Panel
         async function initAdmin() {
-            // Check auth
-            try {
-                const response = await fetch('/api/admin/status');
-                const data = await response.json();
+            // Check backend first
+            await checkBackend();
 
-                if (!response.ok || !data.logged_in) {
+            // Check auth
+            if (USE_BACKEND) {
+                try {
+                    const response = await fetch('/api/admin/status');
+                    const data = await response.json();
+                    if (!data.logged_in) {
+                        window.location.href = 'admin-login.html';
+                        return;
+                    }
+                } catch (e) {
+                    // Fallback to localStorage if backend auth check fails
+                    if (localStorage.getItem('admin_logged_in') !== 'true') {
+                        window.location.href = 'admin-login.html';
+                        return;
+                    }
+                }
+            } else {
+                // Offline - check localStorage
+                if (localStorage.getItem('admin_logged_in') !== 'true') {
                     window.location.href = 'admin-login.html';
                     return;
                 }
-            } catch (e) {
-                window.location.href = 'admin-login.html';
-                return;
             }
+
+            // Load timetable data
+            currentTimetableData = await loadTimetableData();
 
             // Render classes grid
             const grid = document.getElementById('admin-classes-grid');

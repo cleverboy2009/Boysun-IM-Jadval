@@ -4,154 +4,211 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ustozlar - Boysun IM</title>
+    <title>Vaqtinchalik Cheklov | Boysun IM</title>
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Styles -->
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="favicon.png">
-    <!-- Maintenance Script Removed -->
+    <style>
+        :root {
+            --restriction-color: #ff4757;
+            --restriction-glow: rgba(255, 71, 87, 0.4);
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin: 0;
+            background: #0f172a;
+        }
+
+        .restriction-container {
+            max-width: 500px;
+            width: 90%;
+            padding: 40px 20px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .alert-icon {
+            font-size: 5rem;
+            color: var(--restriction-color);
+            margin-bottom: 30px;
+            filter: drop-shadow(0 0 15px var(--restriction-glow));
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.1);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .restriction-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .countdown-wrapper {
+            margin-top: 20px;
+        }
+
+        .timer-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .timer-progress {
+            height: 100%;
+            background: var(--restriction-color);
+            width: 100%;
+            transition: width 1s linear;
+        }
+
+        .timer-text {
+            color: var(--restriction-color);
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .back-home {
+            margin-top: 30px;
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .back-home:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        /* Mobile specific adjustments */
+        @media (max-width: 576px) {
+            .restriction-card {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            p {
+                font-size: 1rem;
+            }
+
+            .alert-icon {
+                font-size: 4rem;
+            }
+        }
+    </style>
 </head>
 
 <body class="dark-mode">
     <div class="background-effects">
-        <div class="blob"></div>
-        <div class="blob blob-2"></div>
+        <div class="blob" style="background: var(--restriction-glow);"></div>
+        <div class="blob blob-2" style="background: rgba(59, 130, 246, 0.2);"></div>
     </div>
 
-    <header class="header">
-        <div class="navbar">
-            <a href="index.html" class="logo">
-                <img src="favicon.png" alt="Logo">
-                Boysun <span>IM</span>
-            </a>
-            <div class="header-actions">
-                <button class="theme-toggle" id="theme-toggle" aria-label="Mavzu">
-                    <i class="fas fa-sun"></i>
-                </button>
-            </div>
+    <div class="restriction-container">
+        <div class="alert-icon">
+            <i class="fas fa-exclamation-triangle"></i>
         </div>
-    </header>
 
-    <main class="main-content">
-        <div class="container">
-            <div class="hero-text text-center mb-5">
-                <h1>Ustozlar Jadvali</h1>
-                <p class="text-muted">Ma'lumot olish uchun ustozni tanlang</p>
-            </div>
+        <div class="restriction-card">
+            <h1>Vaqtinchalik cheklov</h1>
+            <p>Hurmatli ustoz, <b>Ustozlar bo'limi</b> vaqtinchalik ishlamaydi, texnik xatolar tuzatilayapdi.
+                Keltirilgan noqulayliklar uchun uzr so'raymiz.</p>
 
-            <div class="row g-4 mb-5" id="teachers-list">
-                <!-- O'qituvchilar ro'yxati shu yerga yuklanadi -->
-                <div class="text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Yuklanmoqda...</span>
-                    </div>
+            <div class="countdown-wrapper">
+                <div class="timer-bar">
+                    <div id="progress" class="timer-progress"></div>
+                </div>
+                <div class="timer-text">
+                    <span id="seconds">10</span> soniyadan so'ng qaytariladi...
                 </div>
             </div>
 
-            <div class="text-center mt-4">
-                <a href="index.html" class="btn btn-outline-primary">
-                    <i class="fas fa-arrow-left me-2"></i>Bosh sahifaga qaytish
-                </a>
-            </div>
+            <a href="index.html" class="back-home">
+                <i class="fas fa-home me-2"></i> Bosh sahifa
+            </a>
         </div>
-    </main>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="script.js"></script>
-    <script src="teacher_data.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const container = document.getElementById('teachers-list');
+        let timeLeft = 10;
+        const secondsSpan = document.getElementById('seconds');
+        const progress = document.getElementById('progress');
 
-            // 1. Try to fetch data from API (Real Server)
-            let data = [];
-            try {
-                const response = await fetch('/api/teachers?t=' + Date.now());
-                if (response.ok) {
-                    const apiData = await response.json();
-                    if (apiData && apiData.length > 0) {
-                        data = apiData;
-                        console.log('O\'qituvchilar ma\'lumoti API orqali yuklandi');
-                    }
-                }
-            } catch (e) {
-                console.log('API mavjud emas, lokal ma\'lumotlar tekshirilmoqda...');
+        const timer = setInterval(() => {
+            timeLeft--;
+            secondsSpan.textContent = timeLeft;
+
+            // Progress bar update
+            const width = (timeLeft / 10) * 100;
+            progress.style.width = width + '%';
+
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                window.location.href = 'index.html';
             }
+        }, 1000);
 
-            // 2. Try LocalStorage
-            if (data.length === 0) {
-                const localStored = localStorage.getItem('teacherData');
-                if (localStored) {
-                    try {
-                        data = JSON.parse(localStored);
-                        console.log('O\'qituvchilar (LocalStorage)');
-                    } catch (e) { }
-                }
-            }
-
-            // 3. Fallback to Script Variable
-            if (data.length === 0 && typeof teacherData !== 'undefined') {
-                data = teacherData;
-            }
-
-            if (!data || data.length === 0) {
-                container.innerHTML = '<div class="alert alert-warning">O\'qituvchilar ro\'yxati topilmadi.</div>';
-                return;
-            }
-
-            let html = '';
-            data.forEach(teacher => {
-                html += `
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <a href="teacher_jadval.html?name=${encodeURIComponent(teacher.name)}" class="glass-card text-decoration-none d-flex align-items-center p-3 h-100 teacher-card">
-                            <div class="avatar-circle me-3">
-                                ${teacher.name.charAt(0)}
-                            </div>
-                            <div>
-                                <h5 class="mb-1 text-main">${teacher.name}</h5>
-                                <p class="mb-0 text-muted small">${teacher.subject}</p>
-                            </div>
-                            <i class="fas fa-chevron-right ms-auto text-primary"></i>
-                        </a>
-                    </div>
-                `;
-            });
-
-            container.innerHTML = html;
-        });
-
-        // Real-time updates from Admin Panel
-        window.addEventListener('storage', function (e) {
-            if (e.key === 'teacherData') {
-                location.reload();
-            }
+        // Instant redirect prevention on manual clicks if needed
+        document.querySelector('.back-home').addEventListener('click', (e) => {
+            clearInterval(timer);
         });
     </script>
-    <style>
-        .avatar-circle {
-            width: 50px;
-            height: 50px;
-            background: var(--primary);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1.2rem;
-        }
-
-        .teacher-card {
-            transition: all 0.3s ease;
-            border-left: 4px solid transparent;
-        }
-
-        .teacher-card:hover {
-            transform: translateY(-5px);
-            border-left-color: var(--primary);
-            background: rgba(255, 255, 255, 0.1);
-        }
-    </style>
 </body>
 
 </html>
