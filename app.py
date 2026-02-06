@@ -124,7 +124,6 @@ def get_teachers():
 
 @app.route('/api/teachers', methods=['POST'])
 @admin_required
-@csrf.exempt
 def add_teacher():
     data = request.get_json()
     teachers = load_db(TEACHERS_DB)
@@ -141,7 +140,6 @@ def add_teacher():
 
 @app.route('/api/teachers/<int:tid>', methods=['DELETE'])
 @admin_required
-@csrf.exempt
 def delete_teacher(tid):
     teachers = load_db(TEACHERS_DB)
     teachers = [t for t in teachers if t['id'] != tid]
@@ -158,7 +156,6 @@ def get_timetable():
         return jsonify(json.load(f))
 
 @app.route('/api/timetable', methods=['POST'])
-@csrf.exempt
 def save_timetable():
     # Check auth: accept session login OR static token from legacy frontend
     auth_header = request.headers.get('Authorization')
