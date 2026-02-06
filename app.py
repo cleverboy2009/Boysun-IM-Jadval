@@ -58,8 +58,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Admin Credentials (as requested)
-ADMIN_LOGIN = "boysun"
-ADMIN_PASS = "boysun2026.09"
+ADMIN_LOGIN = "admin"
+ADMIN_PASS = "boysun2026"
 
 # Simple JSON Databases
 TEACHERS_DB = 'teachers.json'
