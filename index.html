@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boysun IM | Dars Jadvali</title>
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <!-- Maintenance Script Removed -->
+</head>
+
+<body class="dark-mode">
+    <div class="background-effects">
+        <div class="blob"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <header class="header">
+        <div class="navbar">
+            <a href="index.html" class="logo">
+                <img src="../favicon.png" alt="Logo">
+                Boysun <span>IM</span>
+            </a>
+            <div class="header-actions">
+                <a href="admin-login.html" class="theme-toggle" title="Admin Panel" style="text-decoration: none;">
+                    <i class="fas fa-user-shield"></i>
+                </a>
+                <a href="updates.html" class="theme-toggle" title="Yangilanishlar" style="text-decoration: none;">
+                    <i class="fas fa-history"></i>
+                </a>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Mavzu">
+                    <i class="fas fa-sun"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <!-- Phase 1: Selection Grid -->
+            <section id="selection-view" class="content-section">
+                <div class="hero-text text-center mb-5">
+                    <h1>Dars Jadvali</h1>
+                    <p class="text-muted">Bo'limni tanlang</p>
+                </div>
+
+                <div class="row g-4 mb-5">
+                    <div class="col-12">
+                        <h2 class="h4 mb-4">Menyu</h2>
+                        <div class="row g-3">
+                            <div class="col-6 col-md-6">
+                                <a href="sinflar.html"
+                                    class="glass-card text-decoration-none d-flex flex-column align-items-center justify-content-center p-4 h-100"
+                                    style="gap: 10px; border-color: var(--primary);">
+                                    <i class="fas fa-calendar-alt fa-2x text-primary"></i>
+                                    <span class="fw-bold text-main">Sinflar</span>
+                                </a>
+                            </div>
+                            <div class="col-6 col-md-6">
+                                <a href="ustozlar.html"
+                                    class="glass-card text-decoration-none d-flex flex-column align-items-center justify-content-center p-4 h-100"
+                                    style="gap: 10px;">
+                                    <i class="fas fa-chalkboard-teacher fa-2x text-primary"></i>
+                                    <span class="fw-bold text-main">Ustozlar</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Mobile Navigation (Boysun IM Design) -->
+    <nav class="ios-mobile-nav d-md-none">
+        <a href="#" class="ios-nav-item active" onclick="app.showClasses()">
+            <i class="fas fa-th"></i>
+            <span>Sinflar</span>
+        </a>
+        <a href="https://t.me/ptmaboysun" class="ios-nav-item" target="_blank">
+            <i class="fab fa-telegram-plane"></i>
+            <span>Telegram</span>
+        </a>
+        <a href="#" class="ios-nav-item" onclick="app.toggleUpdates()">
+            <i class="fas fa-history"></i>
+            <span>Yangilik</span>
+        </a>
+    </nav>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

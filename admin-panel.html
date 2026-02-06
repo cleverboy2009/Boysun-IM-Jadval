@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Boysun IM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dark-mode">
+    <div class="background-effects">
+        <div class="blob"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <header class="header">
+        <div class="navbar">
+            <a href="index.html" class="logo">
+                <img src="../favicon.png" alt="Logo">
+                Boysun <span>IM</span>
+            </a>
+            <div class="header-actions">
+                <a href="index.html" class="theme-toggle" title="Bosh sahifa" style="text-decoration: none;">
+                    <i class="fas fa-home"></i>
+                </a>
+                <button class="theme-toggle" onclick="saveAllChanges()" title="Saqlash">
+                    <i class="fas fa-save"></i>
+                </button>
+                <button class="theme-toggle" id="theme-toggle" aria-label="Mavzu">
+                    <i class="fas fa-sun"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <section id="selection-view" class="content-section">
+                <div class="hero-text text-center mb-5">
+                    <h1 class="display-4 fw-bold gradient-text">Admin Panel</h1>
+                    <p class="lead text-muted">Sinflarning dars jadvalini o'zgartirish</p>
+                </div>
+
+                <div class="row g-4" id="admin-classes-grid">
+                    <!-- Classes will be injected here -->
+                </div>
+            </section>
+
+            <section id="timetable-view" class="content-section d-none">
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <button class="btn btn-outline-primary btn-sm rounded-circle" onclick="backToSelection()">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <h2 id="current-class-title" class="mb-0">Sinf Nomi</h2>
+                </div>
+
+                <div class="glass-card p-0 overflow-hidden">
+                    <div class="table-responsive">
+                        <table class="table table-bordered border-white border-opacity-10 mb-0">
+                            <thead>
+                                <tr class="bg-white bg-opacity-5">
+                                    <th>KUNLAR</th>
+                                    <th class="text-center">1</th>
+                                    <th class="text-center">2</th>
+                                    <th class="text-center">3</th>
+                                    <th class="text-center">4</th>
+                                    <th class="text-center">5</th>
+                                    <th class="text-center">6</th>
+                                    <th class="text-center">7</th>
+                                    <th class="text-center">8</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-timetable-body">
+                                <!-- Timetable rows will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal for editing lesson -->
+    <div class="modal fade" id="editLessonModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content glass-card">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">Darsni tahrirlash</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Fanni tanlang</label>
+                        <select class="form-select bg-dark text-white" id="subjectSelect">
+                            <!-- Subjects will be injected here -->
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmLessonEdit()">Saqlash</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="save-indicator" class="save-indicator"
+        style="position:fixed; bottom:20px; right:20px; background:#10b981; color:white; padding:10px 20px; border-radius:30px; display:none; align-items:center; gap:10px; z-index:1000;">
+        <i class="fas fa-check-circle"></i>
+        <span>Lokalga saqlandi!</span>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="timetable-data.js"></script>
+    <script src="api-client.js"></script>
+    <script>
+        const classes = ["5-A", "5-B", "6-A", "7-A", "7-B", "7-V", "8-A", "8-B", "8-V", "9-A", "9-B", "9-V", "10-A", "10-B", "10-V", "11-A", "11-B", "11-V"];
+        const days = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma"];
+        let currentEditingClass = "";
+        let currentEditingDay = "";
+        let currentEditingPeriod = "";
+        let hasUnsavedChanges = false;
+
+        // Initialize Admin Panel
+        async function initAdmin() {
+            // Check auth
+            try {
+                const response = await fetch('/api/admin/status');
+                const data = await response.json();
+
+                if (!response.ok || !data.logged_in) {
+                    window.location.href = 'admin-login.html';
+                    return;
+                }
+            } catch (e) {
+                window.location.href = 'admin-login.html';
+                return;
+            }
+
+            // Render classes grid
+            const grid = document.getElementById('admin-classes-grid');
+            grid.innerHTML = classes.map(c => `
+                <div class="col-6 col-md-3 col-lg-2 text-center">
+                    <div class="class-square" onclick="showClassTimetable('${c}')">
+                        <h3>${c}</h3>
+                    </div>
+                </div>
+            `).join('');
+
+            // Background effects
+            document.addEventListener('mousemove', (e) => {
+                const blobs = document.querySelectorAll('.blob');
+                const x = e.clientX;
+                const y = e.clientY;
+                blobs[0].style.transform = `translate(${x / 50}px, ${y / 50}px)`;
+                blobs[1].style.transform = `translate(${-x / 30}px, ${-y / 30}px)`;
+            });
+        }
+
+        function showClassTimetable(className) {
+            currentEditingClass = className;
+            document.getElementById('current-class-title').innerText = className + " sinfi dars jadvali";
+            document.getElementById('selection-view').classList.add('d-none');
+            document.getElementById('timetable-view').classList.remove('d-none');
+            renderTimetable();
+        }
+
+        function renderTimetable() {
+            const body = document.getElementById('admin-timetable-body');
+            const classData = TimetableData.timetableData[currentEditingClass] || {};
+
+            let html = "";
+            days.forEach(day => {
+                const dayLessons = classData[day] || [];
+                html += `<tr><td class="bg-white bg-opacity-5 fw-bold text-primary">${day}</td>`;
+
+                for (let i = 1; i <= 8; i++) {
+                    const lesson = dayLessons.find(l => l[0] == i);
+                    const subjectCode = lesson ? lesson[1] : "";
+                    const subjectName = TimetableData.subjects[subjectCode] || subjectCode || "-";
+
+                    html += `<td class="text-center" style="cursor:pointer;" onclick="editLesson('${day}', ${i}, '${subjectCode}')">${subjectName}</td>`;
+                }
+                html += "</tr>";
+            });
+            body.innerHTML = html;
+        }
+
+        function editLesson(day, period, currentSubject) {
+            currentEditingDay = day;
+            currentEditingPeriod = period;
+
+            const select = document.getElementById('subjectSelect');
+            let html = '<option value="">Dars yo\'q</option>';
+            for (const [code, name] of Object.entries(TimetableData.subjects)) {
+                html += `<option value="${code}" ${code === currentSubject ? 'selected' : ''}>${name}</option>`;
+            }
+            select.innerHTML = html;
+
+            new bootstrap.Modal(document.getElementById('editLessonModal')).show();
+        }
+
+        function confirmLessonEdit() {
+            const subject = document.getElementById('subjectSelect').value;
+            if (!TimetableData.timetableData[currentEditingClass]) TimetableData.timetableData[currentEditingClass] = {};
+            if (!TimetableData.timetableData[currentEditingClass][currentEditingDay]) TimetableData.timetableData[currentEditingClass][currentEditingDay] = [];
+
+            const dayLessons = TimetableData.timetableData[currentEditingClass][currentEditingDay];
+            const idx = dayLessons.findIndex(l => l[0] == currentEditingPeriod);
+
+            if (idx > -1) {
+                dayLessons[idx][1] = subject;
+            } else {
+                dayLessons.push([currentEditingPeriod.toString(), subject]);
+            }
+
+            dayLessons.sort((a, b) => a[0] - b[0]);
+
+            bootstrap.Modal.getInstance(document.getElementById('editLessonModal')).hide();
+            renderTimetable();
+            hasUnsavedChanges = true;
+        }
+
+        function backToSelection() {
+            document.getElementById('timetable-view').classList.add('d-none');
+            document.getElementById('selection-view').classList.remove('d-none');
+        }
+
+        async function saveAllChanges() {
+            try {
+                // 1. Save to File (Real sync)
+                const res = await apiClient.updateTimetable(TimetableData.timetableData);
+
+                // 2. Save to localStorage (Local fallback)
+                TimetableData.save();
+
+                if (res.success) {
+                    showSaveIndicator();
+                    hasUnsavedChanges = false;
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                // Fallback for local only
+                TimetableData.save();
+                showSaveIndicator();
+                hasUnsavedChanges = false;
+            }
+        }
+
+        function showSaveIndicator() {
+            const ind = document.getElementById('save-indicator');
+            ind.style.display = 'flex';
+            setTimeout(() => ind.style.display = 'none', 3000);
+        }
+
+        window.addEventListener('beforeunload', (e) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Theme Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        themeToggle.onclick = () => {
+            document.body.classList.toggle('light-mode');
+            const icon = themeToggle.querySelector('i');
+            icon.className = document.body.classList.contains('light-mode') ? 'fas fa-moon' : 'fas fa-sun';
+        };
+
+        initAdmin();
+    </script>
+</body>
+
+</html>

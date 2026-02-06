@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ustoz Jadvali | Boysun IM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="../favicon.png">
+    <!-- Maintenance Script Removed -->
+</head>
+
+<body class="dark-mode">
+    <div class="background-effects">
+        <div class="blob"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <header class="header">
+        <div class="navbar">
+            <a href="index.html" class="logo">
+                <img src="../favicon.png" alt="Logo">
+                Boysun <span>IM</span>
+            </a>
+            <div class="header-actions">
+                <a href="index.html" class="theme-toggle" title="Bosh sahifa" style="text-decoration: none;">
+                    <i class="fas fa-home"></i>
+                </a>
+                <button class="theme-toggle" id="theme-toggle">
+                    <i class="fas fa-sun"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container py-4">
+            <div class="glass-card">
+                <div
+                    class="d-flex align-items-center justify-content-between mb-4 border-bottom border-opacity-10 pb-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <button class="btn btn-sm btn-outline-primary rounded-circle" onclick="window.history.back()"
+                            style="width:36px;height:36px;">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <div>
+                            <h2 id="display-teacher" class="h4 mb-0 fw-bold text-primary">Ustoz Nomi</h2>
+                            <p class="small text-muted mb-0 fw-bold">Haftalik Ish Rejasi</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-borderless align-middle custom-table">
+                        <thead>
+                            <tr class="text-muted small">
+                                <th>KUNLAR</th>
+                                <th class="text-center">1</th>
+                                <th class="text-center">2</th>
+                                <th class="text-center">3</th>
+                                <th class="text-center">4</th>
+                                <th class="text-center">5</th>
+                                <th class="text-center">6</th>
+                                <th class="text-center">7</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teacher-timetable-body">
+                            <!-- Injected by script -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <nav class="ios-mobile-nav d-md-none">
+        <a href="index.html" class="ios-nav-item"><i class="fas fa-home"></i><span>Bosh</span></a>
+        <a href="#" class="ios-nav-item active"><i class="fas fa-user-tie"></i><span>Ustoz</span></a>
+    </nav>
+
+    <script src="teacher_data.js"></script>
+    <script>
+        const app = {
+            async init() {
+                // 1. Try to fetch data from API (Real Server)
+                let currentData = [];
+                try {
+                    const response = await fetch('/api/teachers?t=' + Date.now());
+                    if (response.ok) {
+                        const apiData = await response.json();
+                        if (apiData && apiData.length > 0) {
+                            currentData = apiData;
+                        }
+                    }
+                } catch (e) {
+                    console.log('API mavjud emas, lokal ma\'lumotlar tekshirilmoqda...');
+                }
+
+                // 2. Try LocalStorage (Admin panel o'zgarishlari uchun)
+                if (currentData.length === 0) {
+                    const localStored = localStorage.getItem('teacherData');
+                    if (localStored) {
+                        try {
+                            currentData = JSON.parse(localStored);
+                            console.log('O\'qituvchilar (LocalStorage)');
+                        } catch (e) { }
+                    }
+                }
+
+                // 3. Fallback to JS file data
+                if (currentData.length === 0 && typeof teacherData !== 'undefined') {
+                    currentData = teacherData;
+                    console.log('O\'qituvchilar (JS File)');
+                }
+
+                this.data = currentData; // Store in app instance
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const name = urlParams.get('name');
+                if (!name) { window.location.href = 'index.html'; return; }
+
+                document.getElementById('display-teacher').innerText = name;
+                this.render(name);
+                this.setupTheme();
+            },
+            render(name) {
+                const container = document.getElementById('teacher-timetable-body');
+                const data = this.data; // Use fetched or local data
+
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<tr><td colspan="8" class="text-center py-5 text-danger">Xatolik: Ma\'lumotlar yuklanmadi.</td></tr>';
+                    return;
+                }
+
+                const teacher = data.find(t => t.name === name);
+                const schedule = teacher ? teacher.schedule : null;
+
+                if (!schedule) {
+                    container.innerHTML = '<tr><td colspan="8" class="text-center py-5">Ushbu ustoz jadvali hali kiritilmagan.</td></tr>';
+                    return;
+                }
+
+                const days = ["Dushanba", "Seshanba", "Chorshanba", "Payshanba", "Juma"];
+                container.innerHTML = days.map(day => {
+                    const lessons = schedule[day] || ["", "", "", "", "", "", ""];
+                    // Render 7 columns as standard, or dynamic?
+                    // Image had ~8 columns.
+                    // teacher_data has variable length arrays (mostly 7-8).
+                    // We must map all available lessons in the array.
+                    // If schedule array has 8 items, we should ideally show 8 columns or truncate/wrap. 
+                    // However, header has 7 columns (1-7).
+                    // Let's stick to displaying whatever is in the array, but table header might cover only 7.
+                    // To be safe, we map valid lessons.
+
+                    return `
+                        <tr>
+                            <td class="fw-bold text-primary">${day}</td>
+                            ${lessons.map((l, i) => {
+                        // Only show up to 8?
+                        return `<td class="text-center"><span class="${(!l || l === '-') ? 'text-muted opacity-25' : 'subject-name'}">${l || '-'}</span></td>`;
+                    }).join('')}
+                        </tr>
+                    `;
+                }).join('');
+            },
+            setupTheme() {
+                const btn = document.getElementById('theme-toggle');
+                const applyTheme = (isLight) => {
+                    document.body.classList.toggle('light-mode', isLight);
+                    btn.querySelector('i').className = isLight ? 'fas fa-moon' : 'fas fa-sun';
+                    localStorage.setItem('theme', isLight ? 'light' : 'dark');
+                };
+                btn.onclick = () => {
+                    const isNowLight = !document.body.classList.contains('light-mode');
+                    applyTheme(isNowLight);
+                };
+                const saved = localStorage.getItem('theme');
+                if (saved === 'light') {
+                    applyTheme(true);
+                }
+            }
+        };
+        document.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+
+</html>
