@@ -23,9 +23,10 @@ ADMIN_LOGIN = "Barzu Majidov01"
 ADMIN_PASS = "boysun2026"
 
 # Simple JSON Databases
-TEACHERS_DB = 'teachers.json'
-TIMETABLE_DB = 'timetable.json'
-TIMETABLE_JS = 'timetable-data.js'
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEACHERS_DB = os.path.join(BASE_DIR, 'teachers.json')
+TIMETABLE_DB = os.path.join(BASE_DIR, 'timetable.json')
+TIMETABLE_JS = os.path.join(BASE_DIR, 'timetable-data.js')
 
 def sync_timetable_js(data):
     """Sync changes to the static JS file for local usage"""
