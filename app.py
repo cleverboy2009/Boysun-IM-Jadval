@@ -58,7 +58,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Admin Credentials (as requested)
-ADMIN_LOGIN = "admin"
+ADMIN_LOGIN = "Barzu Majidov01"
 ADMIN_PASS = "boysun2026"
 
 # Simple JSON Databases
@@ -117,6 +117,34 @@ def sanitize_input(text, max_length=1000):
     
     return text.strip()
 
+
+
+# Authentication Decorator
+def admin_required(f):
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get('logged_in'):
+            return jsonify({'error': 'Unauthorized'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Routes
+@app.route('/')
+def index():
+    """Serve index.html"""
+    return send_from_directory('.', 'index.html')
+
+@app.route('/<path:path>')
+def serve_static(path):
+    """Serve static files"""
+    return send_from_directory('.', path)
+
+@app.route('/api/csrf-token', methods=['GET'])
+def get_csrf_token():
+    """Get CSRF token for forms"""
+    token = generate_csrf()
+    return jsonify({'csrf_token': token})
 
 # Admin API
 @app.route('/api/admin/login', methods=['POST'])
