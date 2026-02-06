@@ -1,22 +1,9 @@
-"""
-Flask Backend for Boysun School Website
-Provides security features and contact form handling
-"""
 import os
 import re
 from datetime import datetime
-from flask import Flask, request, jsonify, render_template, send_from_directory
-from flask_wtf.csrf import CSRFProtect, generate_csrf
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from flask_talisman import Talisman
-from dotenv import load_dotenv
+from flask import Flask, request, jsonify, send_from_directory, session
 import logging
 import json
-from flask import session
-
-# Load environment variables
-load_dotenv()
 
 # Initialize Flask app
 app = Flask(__name__, 
@@ -25,33 +12,7 @@ app = Flask(__name__,
             template_folder='.')
 
 # Configuration
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', os.urandom(32).hex())
-app.config['WTF_CSRF_TIME_LIMIT'] = None  # CSRF tokens don't expire
-
-# Initialize security extensions
-csrf = CSRFProtect(app)
-
-# Rate limiting
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"],
-    storage_uri="memory://"
-)
-
-# Security headers with Talisman
-csp = {
-    'default-src': ["'self'"],
-    'script-src': ["'self'", "'unsafe-inline'", 'https://cdnjs.cloudflare.com'],
-    'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdnjs.cloudflare.com'],
-    'font-src': ["'self'", 'https://fonts.gstatic.com', 'https://cdnjs.cloudflare.com'],
-    'img-src': ["'self'", 'data:', 'https:'],
-    'connect-src': ["'self'"]
-}
-
-Talisman(app, 
-         content_security_policy=csp,
-         force_https=False)  # Set to True in production with HTTPS
+app.secret_key = os.getenv('SECRET_KEY', 'boysun_secret_key_2026')
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -119,15 +80,6 @@ def sanitize_input(text, max_length=1000):
 
 
 
-# Authentication Decorator
-def admin_required(f):
-    from functools import wraps
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not session.get('logged_in'):
-            return jsonify({'error': 'Unauthorized'}), 401
-        return f(*args, **kwargs)
-    return decorated_function
 
 # Routes
 @app.route('/')
@@ -143,12 +95,11 @@ def serve_static(path):
 @app.route('/api/csrf-token', methods=['GET'])
 def get_csrf_token():
     """Get CSRF token for forms"""
-    token = generate_csrf()
-    return jsonify({'csrf_token': token})
+    # Simple mock token since we removed WTF
+    return jsonify({'csrf_token': 'no-csrf-needed-in-simple-mode'})
 
 # Admin API
 @app.route('/api/admin/login', methods=['POST'])
-@csrf.exempt
 def admin_login():
     data = request.get_json()
     if data.get('login') == ADMIN_LOGIN and data.get('password') == ADMIN_PASS:
